@@ -5,7 +5,10 @@ from openai import OpenAI
 import os
 
 OPENAI_API_KEY = st.secrets["OPENAI_API_KEY"]
-client = OpenAI(api_key=OPENAI_API_KEY)
+client = OpenAI(
+	api_key=OPENAI_API_KEY,
+	base_url="https://api.groq.com/openai/v1",  # ✅ Required for Groq
+)
 
 st.set_page_config(page_title="AI Resume Enhancer", layout="centered")
 st.title("📄 AI Resume Enhancer")
@@ -46,7 +49,7 @@ if st.button("Analyze Resume"):
         """
         with st.spinner("Analyzing with GPT..."):
             response = client.chat.completions.create(
-                model="gpt-4",
+                model="llama3-70b-8192",
                 messages=[{"role": "user", "content": prompt}],
                 temperature=0.6
             )
