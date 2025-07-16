@@ -1,7 +1,7 @@
 import streamlit as st
 import pdfplumber
 from openai import OpenAI
-from config import OPENAI_API_KEY
+OPENAI_API_KEY = st.secrets["OPENAI_API_KEY"]
 
 # 👇 Use Groq base_url
 client = OpenAI(
