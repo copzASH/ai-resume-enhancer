@@ -1,106 +1,108 @@
 import streamlit as st
 import pdfplumber
 import spacy
-from openai import OpenAI
 import os
 import re
-from sklearn.feature_extraction.text import CountVectorizer
 import nltk
 from nltk.corpus import stopwords
+from openai import OpenAI
+from sklearn.feature_extraction.text import CountVectorizer
 
-# ----------------------------
 # Setup
-# ----------------------------
-nltk.download('stopwords')
-stop_words = set(stopwords.words('english'))
-
-try:
-    nlp = spacy.load("en_core_web_sm")
-except OSError:
-    import spacy.cli
-    spacy.cli.download("en_core_web_sm")
-    nlp = spacy.load("en_core_web_sm")
-
-# Streamlit UI
 st.set_page_config(page_title="AI Resume Enhancer", layout="centered")
 st.title("📄 AI Resume Enhancer")
 
+# Preload NLTK stopwords
+nltk.download('stopwords', quiet=True)
+stop_words = set(stopwords.words('english'))
+
+# Load Spacy model
+@st.cache_resource
+def load_spacy_model():
+    try:
+        return spacy.load("en_core_web_sm")
+    except OSError:
+        from spacy.cli import download
+        download("en_core_web_sm")
+        return spacy.load("en_core_web_sm")
+
+nlp = load_spacy_model()
+
 # OpenAI API (Groq) setup
-OPENAI_API_KEY = st.secrets["OPENAI_API_KEY"]
+OPENAI_API_KEY = st.secrets.get("OPENAI_API_KEY", "")
 client = OpenAI(
     api_key=OPENAI_API_KEY,
-    base_url="https://api.groq.com/openai/v1",  # ✅ For Groq
+    base_url="https://api.groq.com/openai/v1",
 )
 
+# Upload & JD Input
 uploaded_resume = st.file_uploader("Upload your Resume (PDF, ≤10MB)", type=["pdf"])
 job_description = st.text_area("Paste the Job Description", height=200)
 
 # ----------------------------
-# Keyword Extraction (Cleaned)
+# Keyword Extraction
 # ----------------------------
 def extract_keywords(text, max_keywords=25):
-    text = re.sub(r'[^\w\s]', '', text.lower())  # Remove punctuation & lowercase
-    words = [word for word in text.split() if word not in stop_words and len(word) > 2]
+    text = re.sub(r"[^\w\s]", "", text.lower())
+    words = [w for w in text.split() if w not in stop_words and len(w) > 2]
     vectorizer = CountVectorizer(max_features=max_keywords)
     word_counts = vectorizer.fit_transform([' '.join(words)])
-    keywords = vectorizer.get_feature_names_out()
-    return set(keywords)
+    return set(vectorizer.get_feature_names_out())
 
 def get_keyword_analysis(resume_text, job_description):
     resume_keywords = extract_keywords(resume_text)
     jd_keywords = extract_keywords(job_description)
-
-    matched_keywords = jd_keywords & resume_keywords
-    missing_keywords = jd_keywords - resume_keywords
-
-    return {
-        "matched_keywords": matched_keywords,
-        "missing_keywords": missing_keywords,
-        "match_score": int(len(matched_keywords) / len(jd_keywords) * 100) if jd_keywords else 0
-    }
+    matched = jd_keywords & resume_keywords
+    missing = jd_keywords - resume_keywords
+    score = int(len(matched) / len(jd_keywords) * 100) if jd_keywords else 0
+    return matched, missing, score
 
 # ----------------------------
-# Resume Analyzer
+# Resume Analysis Logic
+# ----------------------------
+def analyze_resume(resume_text, jd):
+    matched, missing, score = get_keyword_analysis(resume_text, jd)
+
+    st.subheader("📈 Match Score:")
+    st.progress(score / 100)
+    st.write(f"**{score}% match** between your resume and the job description.")
+
+    with st.expander("✅ Matched Keywords"):
+        st.write(", ".join(sorted(matched)))
+    with st.expander("⚠️ Missing Keywords"):
+        st.write(", ".join(sorted(missing)))
+
+    prompt = f"""
+You are an expert resume reviewer. Analyze the resume below in the context of the job description.
+Provide missing skills, matched terms, and improvements in bullet points.
+
+Resume:
+{resume_text}
+
+Job Description:
+{jd}
+"""
+    with st.spinner("Analyzing with LLaMA..."):
+        response = client.chat.completions.create(
+            model="llama3-70b-8192",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.5
+        )
+        st.subheader("🧠 GPT Feedback:")
+        st.write(response.choices[0].message.content)
+
+# ----------------------------
+# Trigger Analysis
 # ----------------------------
 if st.button("Analyze Resume"):
-    if uploaded_resume and job_description:
-        if uploaded_resume.size > 10 * 1024 * 1024:
-            st.error("Please upload a resume smaller than 10MB.")
-        else:
-            with pdfplumber.open(uploaded_resume) as pdf:
-                resume_text = ""
-                for page in pdf.pages:
-                    text = page.extract_text()
-                    if text:
-                        resume_text += text + "\n"
-
-            analysis = get_keyword_analysis(resume_text, job_description)
-            match_score = analysis["match_score"]
-
-            st.subheader("📈 Match Score:")
-            st.progress(match_score / 100)
-            st.write(f"**{match_score}% match** between your resume and the job description.")
-
-            with st.expander("✅ Matched Keywords"):
-                st.write(", ".join(sorted(analysis["matched_keywords"])))
-            with st.expander("⚠️ Missing Keywords"):
-                st.write(", ".join(sorted(analysis["missing_keywords"])))
-
-            prompt = f"""
-You are an expert resume reviewer. Analyze the following resume against the job description. 
-Identify matching skills, missing keywords, and suggest bullet point improvements. 
-Resume:\n{resume_text}\n
-Job Description:\n{job_description}\n
-Give detailed feedback in points.
-"""
-            with st.spinner("Analyzing with GPT..."):
-                response = client.chat.completions.create(
-                    model="llama3-70b-8192",
-                    messages=[{"role": "user", "content": prompt}],
-                    temperature=0.6
-                )
-            st.subheader("🧠 GPT Feedback:")
-            st.write(response.choices[0].message.content)
+    if not uploaded_resume or not job_description:
+        st.warning("Please upload your resume and paste the job description.")
+    elif uploaded_resume.size > 10 * 1024 * 1024:
+        st.error("Resume file must be smaller than 10MB.")
     else:
-        st.warning("Please upload a resume and enter the job description.")
+        with pdfplumber.open(uploaded_resume) as pdf:
+            resume_text = "\n".join(
+                [page.extract_text() for page in pdf.pages if page.extract_text()]
+            )
+        analyze_resume(resume_text, job_description)
 
