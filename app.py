@@ -19,12 +19,8 @@ stop_words = set(stopwords.words('english'))
 # Load Spacy model
 @st.cache_resource
 def load_spacy_model():
-    try:
-        return spacy.load("en_core_web_sm")
-    except OSError:
-        from spacy.cli import download
-        download("en_core_web_sm")
-        return spacy.load("en_core_web_sm")
+    import en_core_web_sm
+    nlp = en_core_web_sm.load()
 
 nlp = load_spacy_model()
 
