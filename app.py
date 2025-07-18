@@ -5,9 +5,14 @@ from openai import OpenAI
 import os
 
 # ----------------------------
-# Load spaCy model once
+# Load spaCy model safely
 # ----------------------------
-nlp = spacy.load("en_core_web_sm")
+try:
+    nlp = spacy.load("en_core_web_sm")
+except OSError:
+    import spacy.cli
+    spacy.cli.download("en_core_web_sm")
+    nlp = spacy.load("en_core_web_sm")
 
 # ----------------------------
 # Streamlit UI
@@ -63,11 +68,9 @@ def get_keyword_analysis(resume_text, job_description):
 # ----------------------------
 if st.button("Analyze Resume"):
     if uploaded_resume and job_description:
-        # 10MB size check
         if uploaded_resume.size > 10 * 1024 * 1024:
             st.error("Please upload a resume smaller than 10MB.")
         else:
-            # Extract text from PDF
             with pdfplumber.open(uploaded_resume) as pdf:
                 resume_text = ""
                 for page in pdf.pages:
@@ -75,22 +78,18 @@ if st.button("Analyze Resume"):
                     if text:
                         resume_text += text + "\n"
 
-            # Run keyword analysis
             analysis = get_keyword_analysis(resume_text, job_description)
             match_score = analysis["match_score"]
 
-            # Show match score
             st.subheader("📈 Match Score:")
             st.progress(match_score / 100)
             st.write(f"**{match_score}% match** between your resume and the job description.")
 
-            # Show matched/missing keywords
             with st.expander("✅ Matched Keywords"):
                 st.write(", ".join(sorted(analysis["matched_keywords"])))
             with st.expander("⚠️ Missing Keywords"):
                 st.write(", ".join(sorted(analysis["missing_keywords"])))
 
-            # GPT-powered feedback
             prompt = f"""
 You are an expert resume reviewer. Analyze the following resume against the job description. 
 Identify matching skills, missing keywords, and suggest bullet point improvements. 
