@@ -1,5 +1,7 @@
 streamlit
-openai
 pdfplumber
-python-dotenv
+spacy
+scikit-learn
+nltk
+openai
 
