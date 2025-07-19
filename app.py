@@ -52,6 +52,7 @@ if st.button("✨ Analyze Resume"):
                     jd_keywords = extract_keywords(job_description)
                     resume_keywords = extract_keywords(resume_text)
                     matched = jd_keywords & resume_keywords
+                    unmatched = jd_keywords - resume_keywords
                     score = int(len(matched) / len(jd_keywords) * 100) if jd_keywords else 0
 
                     # ✅ Match Score Visualization: Gauge Chart
@@ -76,17 +77,32 @@ if st.button("✨ Analyze Resume"):
                     st.progress(score / 100)
                     st.write(f"✅ **{score}% match** with the job description.")
                     st.write(f"🔑 **Matched Keywords:** {', '.join(sorted(matched)) or 'None'}")
-					
-					if matched:
-						st.subheader("☁️ Matched Keywords Word Cloud")
-						wordcloud = WordCloud(width=800, height=400, background_color='white').generate(''.join(matched))
-						fig, ax = plt.subplots(figsize=(10, 5))
-						ax.imshow(wordcloud, interpolation='bilinear')
-						ax.axis('off')
-						st.pyplot(fig)
 
+                    # ✅ Word Cloud for matched keywords
+                    if matched:
+                        st.subheader("☁️ Matched Keywords Word Cloud")
+                        wordcloud = WordCloud(width=800, height=400, background_color='white').generate(' '.join(matched))
+                        fig_wc, ax = plt.subplots(figsize=(10, 5))
+                        ax.imshow(wordcloud, interpolation='bilinear')
+                        ax.axis('off')
+                        st.pyplot(fig_wc)
 
-                    # GPT Suggestions
+                    # ✅ Bar Chart for keyword coverage
+                    if jd_keywords:
+                        st.subheader("📊 Keyword Coverage Bar Chart")
+                        coverage_labels = ["Matched", "Unmatched"]
+                        coverage_values = [len(matched), len(unmatched)]
+                        bar_chart = go.Figure(data=[
+                            go.Bar(x=coverage_labels, y=coverage_values, marker_color=["green", "red"])
+                        ])
+                        bar_chart.update_layout(
+                            xaxis_title="Keyword Type",
+                            yaxis_title="Count",
+                            title="Resume vs Job Description Keyword Coverage"
+                        )
+                        st.plotly_chart(bar_chart)
+
+                    # ✅ GPT Suggestions
                     prompt = f"""
 You are a professional resume reviewer. Analyze the following resume in comparison to the job description. 
 Suggest improvements and identify missing skills or keywords.
@@ -111,5 +127,5 @@ Provide feedback as clear bullet points.
                     st.markdown(feedback)
 
             except Exception as e:
-                st.error("An error occurred while analyzing the resume. Please check your input or try again.")
+                st.error(f"An error occurred: {e}")
 
