@@ -3,8 +3,6 @@ import pdfplumber
 import re
 from openai import OpenAI
 import plotly.graph_objects as go
-from wordcloud import WordCloud
-import matplotlib.pyplot as plt
 
 # Setup OpenAI (Groq) client
 OPENAI_API_KEY = st.secrets["OPENAI_API_KEY"]
@@ -31,7 +29,9 @@ job_description = st.text_area("💼 Paste the Job Description", height=200)
 
 # Helper function: Extract keywords
 def extract_keywords(text):
-    return set(re.findall(r'\b[a-zA-Z][a-zA-Z0-9+\-#\.]{1,}\b', text.lower()))
+    words = re.findall(r'\b[a-zA-Z][a-zA-Z0-9+\-#\.]{1,}\b', text.lower())
+    stopwords = {"the", "and", "for", "to", "with", "a", "in", "on", "of", "at", "by", "an", "is", "it", "as", "this", "that", "from"}
+    return set(word for word in words if word not in stopwords and len(word) > 2)
 
 # Analyze Button
 if st.button("✨ Analyze Resume"):
@@ -56,6 +56,8 @@ if st.button("✨ Analyze Resume"):
                     score = int(len(matched) / len(jd_keywords) * 100) if jd_keywords else 0
 
                     # ✅ Match Score Visualization: Gauge Chart
+                    st.subheader("📊 Visual Resume Analysis")
+
                     fig = go.Figure(go.Indicator(
                         mode="gauge+number",
                         value=score,
@@ -72,15 +74,11 @@ if st.button("✨ Analyze Resume"):
                     ))
                     st.plotly_chart(fig)
 
-                    # Textual Score & Progress Bar
-                    st.subheader("📈 Resume Match Score")
                     st.progress(score / 100)
                     st.write(f"✅ **{score}% match** with the job description.")
-                    st.write(f"🔑 **Matched Keywords:** {', '.join(sorted(matched)) or 'None'}")
 
                     # ✅ Bar Chart for keyword coverage
                     if jd_keywords:
-                        st.subheader("📊 Keyword Coverage Bar Chart")
                         coverage_labels = ["Matched", "Unmatched"]
                         coverage_values = [len(matched), len(unmatched)]
                         bar_chart = go.Figure(data=[
