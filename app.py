@@ -78,15 +78,6 @@ if st.button("✨ Analyze Resume"):
                     st.write(f"✅ **{score}% match** with the job description.")
                     st.write(f"🔑 **Matched Keywords:** {', '.join(sorted(matched)) or 'None'}")
 
-                    # ✅ Word Cloud for matched keywords
-                    if matched:
-                        st.subheader("☁️ Matched Keywords Word Cloud")
-                        wordcloud = WordCloud(width=800, height=400, background_color='white').generate(' '.join(matched))
-                        fig_wc, ax = plt.subplots(figsize=(10, 5))
-                        ax.imshow(wordcloud, interpolation='bilinear')
-                        ax.axis('off')
-                        st.pyplot(fig_wc)
-
                     # ✅ Bar Chart for keyword coverage
                     if jd_keywords:
                         st.subheader("📊 Keyword Coverage Bar Chart")
