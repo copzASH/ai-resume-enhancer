@@ -3,6 +3,8 @@ import pdfplumber
 import re
 from openai import OpenAI
 import plotly.graph_objects as go
+from wordcloud import WordCloud
+import matplotlib.pyplot as plt
 
 # Setup OpenAI (Groq) client
 OPENAI_API_KEY = st.secrets["OPENAI_API_KEY"]
@@ -74,6 +76,15 @@ if st.button("✨ Analyze Resume"):
                     st.progress(score / 100)
                     st.write(f"✅ **{score}% match** with the job description.")
                     st.write(f"🔑 **Matched Keywords:** {', '.join(sorted(matched)) or 'None'}")
+					
+					if matched:
+						st.subheader("☁️ Matched Keywords Word Cloud")
+						wordcloud = WordCloud(width=800, height=400, background_color='white').generate(''.join(matched))
+						fig, ax = plt.subplots(figsize=(10, 5))
+						ax.imshow(wordcloud, interpolation='bilinear')
+						ax.axis('off')
+						st.pyplot(fig)
+
 
                     # GPT Suggestions
                     prompt = f"""

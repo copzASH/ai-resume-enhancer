@@ -2,4 +2,6 @@ streamlit
 pdfplumber
 openai
 plotly
+wordcloud
+matplotlib
 
