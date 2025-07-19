@@ -55,25 +55,6 @@ if st.button("✨ Analyze Resume"):
                     unmatched = jd_keywords - resume_keywords
                     score = int(len(matched) / len(jd_keywords) * 100) if jd_keywords else 0
 
-                    # ✅ Match Score Visualization: Gauge Chart
-                    st.subheader("📊 Visual Resume Analysis")
-
-                    fig = go.Figure(go.Indicator(
-                        mode="gauge+number",
-                        value=score,
-                        title={'text': "Resume Match Score"},
-                        gauge={
-                            'axis': {'range': [0, 100]},
-                            'bar': {'color': "green"},
-                            'steps': [
-                                {'range': [0, 50], 'color': "lightcoral"},
-                                {'range': [50, 75], 'color': "khaki"},
-                                {'range': [75, 100], 'color': "lightgreen"},
-                            ]
-                        }
-                    ))
-                    st.plotly_chart(fig)
-
                     st.progress(score / 100)
                     st.write(f"✅ **{score}% match** with the job description.")
 
