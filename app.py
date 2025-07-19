@@ -26,6 +26,72 @@ if uploaded_resume is not None and uploaded_resume.size > 10 * 1024 * 1024:
 # Job Description input
 job_description = st.text_area("💼 Paste the Job Description", height=200)
 
+def get_ai_score(prompt):
+    try:
+        response = client.chat.completions.create(
+            model="llama3-70b-8192",
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=50,
+            temperature=0.3
+        )
+        return int("".join([c for c in response.choices[0].message.content if c.isdigit()]))
+    except:
+        return 0
+
+def calculate_scores(resume_text, jd_text):
+    resume_keywords = set(resume_text.lower().split())
+    jd_keywords = set(jd_text.lower().split())
+    common_keywords = resume_keywords.intersection(jd_keywords)
+    keyword_score = int((len(common_keywords) / len(jd_keywords)) * 100) if jd_keywords else 0
+
+    exp_prompt = f"Rate the relevance of this resume's experience to the following job description on a scale of 0 to 100:\n\nResume:\n{resume_text}\n\nJob Description:\n{jd_text}"
+    experience_score = get_ai_score(exp_prompt)
+
+    skill_prompt = f"Rate the skill alignment of this resume to the job description from 0 to 100:\n\nResume:\n{resume_text}\n\nJob Description:\n{jd_text}"
+    skill_score = get_ai_score(skill_prompt)
+
+    formatting_score = 100
+    if len(resume_text.split()) > 1000:
+        formatting_score -= 20
+    if resume_text.count('.') / len(resume_text.split()) < 0.03:
+        formatting_score -= 20
+
+    overall = int(0.3 * keyword_score + 0.3 * experience_score + 0.2 * skill_score + 0.2 * formatting_score)
+    return keyword_score, experience_score, skill_score, formatting_score, overall
+
+def show_scorecard(resume_text, jd_text):
+    st.subheader("📊 Resume Scorecard")
+    kw, exp, skill, fmt, total = calculate_scores(resume_text, jd_text)
+
+    categories = ['Keyword Match', 'Experience Relevance', 'Skill Alignment', 'Formatting Quality', 'Overall']
+    values = [kw, exp, skill, fmt, total]
+
+    fig = go.Figure(go.Bar(
+        x=categories,
+        y=values,
+        marker_color=['#1f77b4', '#ff7f0e', '#2ca02c', '#9467bd', '#d62728']
+    ))
+    fig.update_layout(
+        yaxis=dict(title='Score (%)'),
+        xaxis=dict(title='Metric'),
+        height=400
+    )
+    st.plotly_chart(fig)
+
+    with st.expander("Detailed Breakdown"):
+        st.write(f"**Keyword Match Score:** {kw}%")
+        st.progress(kw)
+        st.write(f"**Experience Relevance Score:** {exp}%")
+        st.progress(exp)
+        st.write(f"**Skill Alignment Score:** {skill}%")
+        st.progress(skill)
+        st.write(f"**Formatting Quality Score:** {fmt}%")
+        st.progress(fmt)
+        st.markdown(f"### 🏁 Overall Score: `{total}%`")
+
+
+
+
 # --- Helper Functions ---
 def extract_keywords(text):
     words = re.findall(r'\b[a-zA-Z][a-zA-Z0-9+\-#\.]{1,}\b', text.lower())
@@ -116,6 +182,7 @@ if st.button("✨ Analyze Resume"):
                 else:
                     sections = extract_sections(resume_text)
                     score, matched, unmatched, feedback = analyze_resume(resume_text, job_description)
+                    show_scorecard(resume_text, job_description)
 
                     # ✅ Match Score
                     st.progress(score / 100)
