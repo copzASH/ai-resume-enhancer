@@ -96,7 +96,6 @@ def calculate_ats_score(resume_text, job_description):
     score = 0
     details = []
 
-    # 1. Keyword Match (40 pts)
     jd_keywords = set(re.findall(r'\b\w+\b', job_description.lower()))
     resume_words = set(re.findall(r'\b\w+\b', resume_text.lower()))
     matched_keywords = jd_keywords & resume_words
@@ -104,14 +103,12 @@ def calculate_ats_score(resume_text, job_description):
     score += keyword_score
     details.append(f"✅ Keyword Match: {int(keyword_score)}/40")
 
-    # 2. Section Check (20 pts)
     expected_sections = ['education', 'experience', 'projects', 'skills', 'contact']
     section_hits = sum(1 for s in expected_sections if s in resume_text.lower())
     section_score = (section_hits / len(expected_sections)) * 20
     score += section_score
     details.append(f"✅ Sections Present: {int(section_score)}/20")
 
-    # 3. Length Check (20 pts)
     word_count = len(resume_text.split())
     if 300 <= word_count <= 1000:
         length_score = 20
@@ -121,7 +118,6 @@ def calculate_ats_score(resume_text, job_description):
         details.append("⚠️ Resume Length: 10/20 (Too short or long)")
     score += length_score
 
-    # 4. Formatting Issues (20 pts)
     issues = 0
     if re.search(r'(table|image)', resume_text, re.IGNORECASE):
         issues += 1
@@ -266,18 +262,6 @@ if st.button("✨ Analyze Resume"):
 
                     st.progress(score / 100)
                     st.success(f"✅ {score}% match with the job description.")
-
-                    if matched or unmatched:
-                        chart = go.Figure(data=[
-                            go.Bar(x=["Matched", "Unmatched"], y=[len(matched), len(unmatched)],
-                                   marker_color=["green", "red"])
-                        ])
-                        chart.update_layout(
-                            xaxis_title="Keyword Type",
-                            yaxis_title="Count",
-                            title="Keyword Coverage"
-                        )
-                        st.plotly_chart(chart)
 
                     st.subheader("📂 Resume Sections with AI Suggestions")
                     for title, content in sections.items():
