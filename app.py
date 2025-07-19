@@ -35,10 +35,12 @@ def get_ai_score(prompt):
             max_tokens=50,
             temperature=0.3
         )
-        return int("".join([c for c in response.choices[0].message.content if c.isdigit()]))
+        content = response.choices[0].message.content
+        match = re.search(r'\b(\d{1,3})\b', content)
+        return int(match.group(1)) if match else 0
     except:
         return 0
-
+        
 def calculate_scores(resume_text, jd_text):
     resume_keywords = set(resume_text.lower().split())
     jd_keywords = set(jd_text.lower().split())
