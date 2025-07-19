@@ -2,6 +2,7 @@ import streamlit as st
 import pdfplumber
 import re
 from openai import OpenAI
+import plotly.graph_objects as go
 
 # Setup OpenAI (Groq) client
 OPENAI_API_KEY = st.secrets["OPENAI_API_KEY"]
@@ -51,12 +52,24 @@ if st.button("✨ Analyze Resume"):
                     matched = jd_keywords & resume_keywords
                     score = int(len(matched) / len(jd_keywords) * 100) if jd_keywords else 0
 
+		    fig = go.Figure(go.Indicator(
+		        mode="gauge+number",
+		        value=score,
+		        title={'text': "Resume Match Score"},
+		        gauge={'axis': {'range': [0, 100]},
+		    	   'bar': {'color': "green"},
+		    	   'steps': [
+		    	       {'range': [0, 50], 'color': "lightcoral"},
+		    	       {'range': [50, 75], 'color': "khaki"},
+		    	       {'range': [75, 100], 'color': "lightgreen"}]}
+		    ))
+		    st.plotly_chart(fig)
                     # Display Match Score
                     st.subheader("📈 Resume Match Score")
                     st.progress(score / 100)
                     st.write(f"✅ **{score}% match** with the job description.")
                     st.write(f"🔑 Matched Keywords: {', '.join(sorted(matched))}")
-
+		    
                     # GPT Suggestions
                     prompt = f"""
 You are a professional resume reviewer. Analyze the following resume in comparison to the job description. 
