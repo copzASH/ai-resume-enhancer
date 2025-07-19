@@ -26,6 +26,7 @@ if uploaded_resume is not None and uploaded_resume.size > 10 * 1024 * 1024:
 # Job Description input
 job_description = st.text_area("💼 Paste the Job Description", height=200)
 
+# --- AI Scoring Functions ---
 def get_ai_score(prompt):
     try:
         response = client.chat.completions.create(
@@ -89,9 +90,6 @@ def show_scorecard(resume_text, jd_text):
         st.progress(fmt)
         st.markdown(f"### 🏁 Overall Score: `{total}%`")
 
-
-
-
 # --- Helper Functions ---
 def extract_keywords(text):
     words = re.findall(r'\b[a-zA-Z][a-zA-Z0-9+\-#\.]{1,}\b', text.lower())
@@ -143,7 +141,6 @@ def analyze_resume(resume_text, job_description):
     unmatched = jd_keywords - resume_keywords
     score = int(len(matched) / len(jd_keywords) * 100) if jd_keywords else 0
 
-    # Overall GPT Feedback
     prompt = f"""
 You are a professional resume reviewer. Analyze the following resume in comparison to the job description. 
 Suggest improvements and identify missing skills or keywords.
@@ -165,7 +162,7 @@ Provide feedback as clear bullet points.
 
     return score, matched, unmatched, feedback
 
-# --- Button: Analyze Resume ---
+# --- Analyze Resume Button ---
 if st.button("✨ Analyze Resume"):
     if not uploaded_resume or not job_description.strip():
         st.warning("Please upload a resume and enter a job description.")
@@ -184,11 +181,9 @@ if st.button("✨ Analyze Resume"):
                     score, matched, unmatched, feedback = analyze_resume(resume_text, job_description)
                     show_scorecard(resume_text, job_description)
 
-                    # ✅ Match Score
                     st.progress(score / 100)
                     st.success(f"✅ {score}% match with the job description.")
 
-                    # ✅ Bar Chart
                     if matched or unmatched:
                         chart = go.Figure(data=[
                             go.Bar(x=["Matched", "Unmatched"], y=[len(matched), len(unmatched)],
@@ -201,16 +196,16 @@ if st.button("✨ Analyze Resume"):
                         )
                         st.plotly_chart(chart)
 
-                    # ✅ Section-wise Resume Display + AI Feedback
                     st.subheader("📂 Resume Sections with AI Suggestions")
                     for title, content in sections.items():
                         with st.expander(f"📌 {title}"):
-                            st.markdown(f"**Raw Section Content:**\n\n```\n{content}\n```")
+                            st.markdown(f"**Raw Section Content:**\n\n```
+{content}
+```")
                             section_feedback = get_section_feedback(title, content, job_description)
                             st.markdown("**🧠 Suggestions:**")
                             st.markdown(section_feedback)
 
-                    # ✅ Overall GPT Suggestions
                     st.subheader("📌 Overall Resume Suggestions")
                     st.markdown(feedback)
 
