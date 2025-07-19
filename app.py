@@ -199,9 +199,7 @@ if st.button("✨ Analyze Resume"):
                     st.subheader("📂 Resume Sections with AI Suggestions")
                     for title, content in sections.items():
                         with st.expander(f"📌 {title}"):
-                            st.markdown(f"**Raw Section Content:**\n\n```
-{content}
-```")
+                            st.markdown(f"**Raw Section Content:**\n\n```{content}```")
                             section_feedback = get_section_feedback(title, content, job_description)
                             st.markdown("**🧠 Suggestions:**")
                             st.markdown(section_feedback)
