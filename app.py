@@ -164,6 +164,34 @@ Provide feedback as clear bullet points.
 
     return score, matched, unmatched, feedback
 
+# --- ATS compatibility ---
+def check_ats_compatibility(resume_text):
+    issues = []
+
+    # Check for tables or images (very basic heuristic)
+    if re.search(r'(Table|Image)', resume_text, re.IGNORECASE):
+        issues.append("❌ Detected words like 'Table' or 'Image'. ATS may not parse these properly.")
+
+    # Check if too short or too long
+    word_count = len(resume_text.split())
+    if word_count < 200:
+        issues.append("❌ Resume is too short (<200 words). Consider adding more content.")
+    elif word_count > 1200:
+        issues.append("❌ Resume is too long (>1200 words). Try shortening it.")
+
+    # Check for common font issues (basic detection)
+    if not re.search(r'[a-zA-Z]{4,}', resume_text):
+        issues.append("❌ Font issues or garbled text may exist.")
+
+    # Check for missing section headers
+    expected_sections = ['education', 'experience', 'projects', 'skills']
+    if not any(section in resume_text.lower() for section in expected_sections):
+        issues.append("❌ Missing standard section headers (e.g., Education, Experience, Skills).")
+
+    if not issues:
+        return "✅ ATS Compatible", []
+    return "❌ Not Fully ATS Compatible", issues
+
 # --- Analyze Resume Button ---
 if st.button("✨ Analyze Resume"):
     if not uploaded_resume or not job_description.strip():
@@ -182,6 +210,14 @@ if st.button("✨ Analyze Resume"):
                     sections = extract_sections(resume_text)
                     score, matched, unmatched, feedback = analyze_resume(resume_text, job_description)
                     show_scorecard(resume_text, job_description)
+                    # --- ATS Compatibility Check ---
+                    ats_status, ats_issues = check_ats_compatibility(resume_text)
+                    st.subheader("🤖 ATS Compatibility Check")
+                    st.markdown(f"**Status:** {ats_status}")
+                    if ats_issues:
+                    	st.markdown("**Fix Suggestions:**")
+                    	for issue in ats_issues:
+                    		st.markdown(f"- {issue}")
 
                     st.progress(score / 100)
                     st.success(f"✅ {score}% match with the job description.")
