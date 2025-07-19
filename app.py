@@ -211,13 +211,67 @@ if st.button("✨ Analyze Resume"):
                     score, matched, unmatched, feedback = analyze_resume(resume_text, job_description)
                     show_scorecard(resume_text, job_description)
                     # --- ATS Compatibility Check ---
-                    ats_status, ats_issues = check_ats_compatibility(resume_text)
-                    st.subheader("🤖 ATS Compatibility Check")
-                    st.markdown(f"**Status:** {ats_status}")
-                    if ats_issues:
-                    	st.markdown("**Fix Suggestions:**")
-                    	for issue in ats_issues:
-                    		st.markdown(f"- {issue}")
+					ats_status, ats_issues = check_ats_compatibility(resume_text)
+					st.subheader("🤖 ATS Compatibility Check")
+					st.markdown(f"**Status:** {ats_status}")
+					if ats_issues:
+    					st.markdown("**Fix Suggestions:**")
+    					for issue in ats_issues:
+        					st.markdown(f"- {issue}")
+
+					# --- ATS Score Calculation ---
+					def calculate_ats_score(resume_text, job_description):
+						score = 0
+						details = []
+
+						# 1. Keyword Match (40 pts)
+						jd_keywords = set(re.findall(r'\b\w+\b', job_description.lower()))
+						resume_words = set(re.findall(r'\b\w+\b', resume_text.lower()))
+						matched_keywords = jd_keywords & resume_words
+						keyword_score = min(len(matched_keywords) / len(jd_keywords), 1.0) * 40
+						score += keyword_score
+						details.append(f"✅ Keyword Match: {int(keyword_score)}/40")
+
+						# 2. Section Check (20 pts)
+						expected_sections = ['education', 'experience', 'projects', 'skills', 'contact']
+						section_hits = sum(1 for s in expected_sections if s in resume_text.lower())
+						section_score = (section_hits / len(expected_sections)) * 20
+						score += section_score
+						details.append(f"✅ Sections Present: {int(section_score)}/20")
+
+						# 3. Length Check (20 pts)
+						word_count = len(resume_text.split())
+						if 300 <= word_count <= 1000:
+							length_score = 20
+							details.append("✅ Resume Length: 20/20")
+						else:
+							length_score = 10
+							details.append("⚠️ Resume Length: 10/20 (Too short or long)")
+						score += length_score
+
+						# 4. Formatting Issues (20 pts)
+						issues = 0
+						if re.search(r'(table|image)', resume_text, re.IGNORECASE):
+							issues += 1
+						if not re.search(r'[a-zA-Z]{4,}', resume_text):
+							issues += 1
+						format_score = max(0, 20 - (issues * 10))
+						score += format_score
+						if issues == 0:
+							details.append("✅ Formatting: 20/20")
+						else:
+							details.append(f"⚠️ Formatting: {int(format_score)}/20 (Detected formatting issues)")
+
+						return int(score), details
+
+					# --- Display ATS Score ---
+					ats_score, ats_details = calculate_ats_score(resume_text, job_description)
+					st.subheader("📊 ATS Score")
+					st.progress(ats_score)
+					st.markdown(f"**ATS Score: {ats_score}/100**")
+					for detail in ats_details:
+						st.markdown(f"- {detail}")
+
 
                     st.progress(score / 100)
                     st.success(f"✅ {score}% match with the job description.")
