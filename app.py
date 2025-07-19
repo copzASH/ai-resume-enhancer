@@ -7,8 +7,8 @@ import plotly.graph_objects as go
 # Setup OpenAI (Groq) client
 OPENAI_API_KEY = st.secrets["OPENAI_API_KEY"]
 client = OpenAI(
-	api_key=OPENAI_API_KEY,
-	base_url="https://api.groq.com/openai/v1",  # ✅ Required for Groq
+    api_key=OPENAI_API_KEY,
+    base_url="https://api.groq.com/openai/v1",  # ✅ Required for Groq
 )
 
 # Page config
@@ -19,7 +19,7 @@ st.markdown("Enhance your resume to better match job descriptions using AI + key
 # Upload Resume
 uploaded_resume = st.file_uploader("📎 Upload Your Resume (PDF, <10MB)", type=["pdf"])
 
-# File size check (10MB max)
+# File size check
 if uploaded_resume is not None and uploaded_resume.size > 10 * 1024 * 1024:
     st.error("File too large. Please upload a PDF smaller than 10MB.")
     uploaded_resume = None
@@ -52,24 +52,29 @@ if st.button("✨ Analyze Resume"):
                     matched = jd_keywords & resume_keywords
                     score = int(len(matched) / len(jd_keywords) * 100) if jd_keywords else 0
 
-		    fig = go.Figure(go.Indicator(
-		        mode="gauge+number",
-		        value=score,
-		        title={'text': "Resume Match Score"},
-		        gauge={'axis': {'range': [0, 100]},
-		    	   'bar': {'color': "green"},
-		    	   'steps': [
-		    	       {'range': [0, 50], 'color': "lightcoral"},
-		    	       {'range': [50, 75], 'color': "khaki"},
-		    	       {'range': [75, 100], 'color': "lightgreen"}]}
-		    ))
-		    st.plotly_chart(fig)
-                    # Display Match Score
+                    # ✅ Match Score Visualization: Gauge Chart
+                    fig = go.Figure(go.Indicator(
+                        mode="gauge+number",
+                        value=score,
+                        title={'text': "Resume Match Score"},
+                        gauge={
+                            'axis': {'range': [0, 100]},
+                            'bar': {'color': "green"},
+                            'steps': [
+                                {'range': [0, 50], 'color': "lightcoral"},
+                                {'range': [50, 75], 'color': "khaki"},
+                                {'range': [75, 100], 'color': "lightgreen"},
+                            ]
+                        }
+                    ))
+                    st.plotly_chart(fig)
+
+                    # Textual Score & Progress Bar
                     st.subheader("📈 Resume Match Score")
                     st.progress(score / 100)
                     st.write(f"✅ **{score}% match** with the job description.")
-                    st.write(f"🔑 Matched Keywords: {', '.join(sorted(matched))}")
-		    
+                    st.write(f"🔑 **Matched Keywords:** {', '.join(sorted(matched)) or 'None'}")
+
                     # GPT Suggestions
                     prompt = f"""
 You are a professional resume reviewer. Analyze the following resume in comparison to the job description. 
