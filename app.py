@@ -250,8 +250,9 @@ if st.button("✨ Analyze Resume"):
                     st.markdown(f"**ATS Score: {ats_score}/100**")
                     for detail in ats_details:
                         st.markdown(f"- {detail}")
+                        
+                    kw_score, exp_score, skill_score, fmt_score, overall_score = calculate_scores(resume_text, job_description)
 
-                    score, matched, unmatched, feedback = analyze_resume(resume_text, job_description)
                     st.progress(score / 100)
                     st.success(f"✅ {score}% match with the job description.")
 
