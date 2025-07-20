@@ -153,6 +153,27 @@ def extract_sections(text):
         sections[current_section].append(line.strip())
 
     return {k: "\n".join(v).strip() for k, v in sections.items()}
+    
+def enhance_section_with_gpt(section_name, section_text, job_description):
+    prompt = f"""
+You are an expert resume writer. Improve the **{section_name}** section of this resume to better match the job description. 
+Focus on improving clarity, relevance, and keyword alignment.
+
+Section:
+{section_text}
+
+Job Description:
+{job_description}
+
+Return only the rewritten version.
+"""
+    response = client.chat.completions.create(
+        model="llama3-70b-8192",
+        messages=[{"role": "user", "content": prompt}],
+        temperature=0.5
+    )
+    return response.choices[0].message.content.strip()
+
 
 def get_section_feedback(section_name, section_text, job_description):
     prompt = f"""
@@ -203,6 +224,31 @@ Provide feedback as clear bullet points.
     feedback = response.choices[0].message.content
 
     return score, matched, unmatched, feedback
+    
+# --- Auto Enhance Button ---
+if st.button("🚀 Auto Enhance Resume"):
+    if not uploaded_resume or not job_description.strip():
+        st.warning("Please upload a resume and enter a job description.")
+    elif not resume_text.strip():
+        st.warning("Resume content not available. Please run analysis first.")
+    else:
+        st.subheader("✏️ Enhanced Resume (AI Rewritten Sections)")
+        enhanced_sections = {}
+        markdown_output = []
+
+        for title, content in sections.items():
+            enhanced = enhance_section_with_gpt(title, content, job_description)
+            enhanced_sections[title] = enhanced
+
+            with st.expander(f"🆚 {title} - Original vs Enhanced"):
+                st.markdown(f"**📝 Original:**\n```{content}```")
+                st.markdown(f"**✨ Enhanced:**\n```{enhanced}```")
+
+            markdown_output.append(f"### {title}\n{enhanced}\n")
+
+        full_enhanced_md = "\n".join(markdown_output)
+        st.download_button("💾 Download Enhanced Resume (Markdown)", full_enhanced_md, file_name="enhanced_resume.md")
+
 
 def check_ats_compatibility(resume_text):
     issues = []
